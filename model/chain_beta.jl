@@ -1,14 +1,7 @@
 struct SIRstruct
-    S::Vector{Real}
-    I::Vector{Real}
-    R::Vector{Real}
     N::Int
     t_steps::Int
     #add check that sum to 1
-    SIRstruct(N, t_steps; type = Real) = new(
-        Vector{type}(undef, t_steps), Vector{type}(undef, t_steps), Vector{type}(undef, t_steps), 
-        N, t_steps
-    )
 end
 
 function ld_beta_approx_bin(size, prob_exp, value)
@@ -43,22 +36,13 @@ function simulate_transition(compartment, transition, exponent_terms, N)
     ld_beta_approx_bin(compartment .* N, exp.(-exponent_terms), transition)
 end
 
-function (problem::SIRstruct)(θ)
-    @unpack S, I, R, N, t_steps = problem;
-    @unpack β, γ, I₀, δI, δR  = θ;
+function run_model(problem::SIRstruct, θ)
+    @unpack N, t_steps = problem;
+    @unpack I₀, δI, δR  = θ;
 
-    ld = 0.0;
-    #priors, none for now
-    #ld += 
-    #    ld_gamma(0.001, 10, β) +
-    #    ld_gamma(0.02, 10, γ) +
-    #    ld_beta(0.1, 20, I₀)
-
-    ld += 
-        ld_gamma(0.00001, 0.001, β) +
-        ld_gamma(0.0002, 0.001, γ) +
-        ld_beta(0.1, 20, I₀)
-
+    S = Vector{eltype(I₀)}(undef, t_steps);
+    I = Vector{eltype(I₀)}(undef, t_steps);
+    R = Vector{eltype(I₀)}(undef, t_steps);
 
     #initial conditions
     S[1] = 1.0 - I₀;
@@ -74,9 +58,26 @@ function (problem::SIRstruct)(θ)
         R[t+1] = R[t] + recoveries;
     end
 
+    return (S = S, I = I, R = R)
+end
+
+function (problem::SIRstruct)(θ)
+    @unpack N = problem;
+    @unpack β, γ, I₀, δI, δR  = θ;
+
+    ld = 0.0;
+    #priors, none for now
+    ld += 
+        ld_gamma(0.001, 10, β) +
+        ld_gamma(0.02, 10, γ) +
+        ld_beta(0.1, 20, I₀)
+
+    #run model
+    @unpack S, I = run_model(problem, θ);
+   
     #likelihood of transitions
     ld += simulate_transition(S, δI, β .* I, N) +
-        simulate_transition(R, δR, γ, N);
+        simulate_transition(I, δR, γ, N);
 
     #likelihood in terms of data
     
@@ -102,13 +103,12 @@ function define_variable_transforms(problem::SIRstruct)
     )
 end
 
-
 #using Test, BenchmarkTools
 #pars = rand(LogDensityProblems.dimension(transformed_model));
 #θ = TransformVariables.transform(variable_transform, pars);
 #model_gradient = ADgradient(:ForwardDiff, transformed_model);
 #LogDensityProblems.logdensity_and_gradient(model_gradient, pars)
-#@benchmark LogDensityProblems.logdensity_and_gradient(model_gradient, pars) #119.211 μs ± 96.460 μs
+#@benchmark LogDensityProblems.logdensity_and_gradient(model_gradient, pars) #119.211 μs ± 96.460 μs #31 with no pre-allocation
 #import ReverseDiff
 #model_gradient = ADgradient(:ReverseDiff, transformed_model, compile = Val(false));
 #LogDensityProblems.logdensity_and_gradient(model_gradient, pars)
