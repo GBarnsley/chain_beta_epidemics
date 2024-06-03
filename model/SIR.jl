@@ -24,8 +24,8 @@ function simulate_model(problem::SIRstruct, θ, N_samples; rng = Random.default_
 
     #simulate transtitions
     for t in 1:(t_steps - 1)
-        infections = S[t, :] .* sample_transitions(S[t, :], β .* I[t, :], N, rng);
-        recoveries = I[t, :] .* sample_transitions(I[t, :], γ, N, rng);
+        infections = S[t, :] .* sample_transitions(S[t, :], rate_to_prob(β .* I[t, :]), N, rng);
+        recoveries = I[t, :] .* sample_transitions(I[t, :], rate_to_prob(γ), N, rng);
         S[t+1, :] = S[t, :] - infections;
         I[t+1, :] = I[t, :] + infections - recoveries;
         R[t+1, :] = R[t, :] + recoveries;

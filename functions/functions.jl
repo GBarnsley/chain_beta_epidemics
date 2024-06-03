@@ -2,6 +2,10 @@ using LogDensityProblems, LogDensityProblemsAD, SimpleUnPack, Random, TransformV
 import Distributions
 include("structs.jl");
 
+function rate_to_prob(rate)
+    return 1.0 .- exp.(-rate)
+end
+
 #Prior Functions
 function calculate_lprior(distribution::Beta_distribution, value)
     @unpack α₁, α₂ = distribution;
@@ -14,17 +18,17 @@ function calculate_lprior(distribution::Gamma_distribution, value)
 end
 
 #Beta transition functions
-function beta_parameters(size, prob_exp)
+function beta_parameters(size, prob)
     N_m = max.(size, 1.001) .- 1; #need to fix this?, just use another when size is close to 1
-    α₁ = N_m .* (1 .- prob_exp);
-    α₂ = N_m .* prob_exp;
+    α₁ = N_m .* prob;
+    α₂ = N_m .* (1 .- prob);
      
     return (α₁, α₂)
 end
 
 function beta_parameters_alternative(size, prob)
     α₁ = size .* prob;
-    α₂ = size - α₁;
+    α₂ = size .- α₁;
 
     return (α₁, α₂)
 end
@@ -34,18 +38,54 @@ function ld_beta(α₁, α₂, value) #could make this more efficient with the s
     return sum(((α₁ .- 1) .* log.(value)) .+ ((α₂ .- 1) .* log.(1 .- value)) .- logbeta.(α₁, α₂)) #do I need the Log-Beta?
 end
 
-function ld_transitions(transition, compartment, exponent_terms, N)
-    α₁, α₂ = beta_parameters(compartment .* N, exp.(-exponent_terms))
-    #α₁, α₂ = beta_parameters_alternative(compartment .* N, 1 .- exp.(-exponent_terms))
+function ld_transitions(transition, compartment, prob, N)
+    α₁, α₂ = beta_parameters(compartment .* N, prob)
+    #α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
 
     return ld_beta(α₁, α₂, transition)
 end
 
 #random sampling
+function sample_transitions_unsafe(compartment, prob, N, rng)
 
-function sample_transitions(compartment, exponent_terms, N, rng)
-    α₁, α₂ = beta_parameters(compartment .* N, exp.(-exponent_terms))
-    #α₁, α₂ = beta_parameters_alternative(compartment .* N, 1 .- exp.(-exponent_terms))
+    α₁, α₂ = beta_parameters(compartment .* N, prob)
+
+    #for checking when there are errors
+    #issue_indices = (α₁ .== 0.0) .|| (α₂ .== 0.0);
+    #if size(exponent_terms, 1) > 1
+    #    print(
+    #        cat(
+    #            compartment[issue_indices],
+    #            exponent_terms[issue_indices],
+    #            dims = 2
+    #        )
+    #    )
+    #else
+    #    print(
+    #        compartment[issue_indices]
+    #    )
+    #end
 
     return rand.(rng, Distributions.Beta.(α₁, α₂))
+end
+
+function index_prob(prob, index)
+    return prob
+end
+
+function index_prob(prob::AbstractArray, index)
+    return prob[index]
+end
+
+function sample_transitions(compartment, prob, N, rng)
+    output = Array{eltype(compartment)}(undef, size(compartment, 1));
+    #need to catch when exponent_terms or compartment is 0 and just set output to 0
+    non_zero_prob_or_compartment = (prob .> 0.0) .& (compartment .> 0.0);
+    output[.!non_zero_prob_or_compartment] .= 0.0;
+
+    output[non_zero_prob_or_compartment] .= sample_transitions_unsafe(
+        compartment[non_zero_prob_or_compartment], index_prob(prob, non_zero_prob_or_compartment), N, rng
+    );
+
+    return output
 end

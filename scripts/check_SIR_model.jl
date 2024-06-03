@@ -9,6 +9,12 @@ problem = SIRstruct(
     Beta_distribution(1.0, 1.0)
 )
 
+simulations = simulate_model(problem, (β = 1, γ = 1/5, I₀ = 1/problem.N), 1000);
+
+
+
+
+
 variable_transform = define_variable_transforms(problem);
 
 transformed_model = TransformedLogDensity(variable_transform, problem);
