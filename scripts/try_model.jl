@@ -9,3 +9,4 @@ transformed_model = TransformedLogDensity(variable_transform, problem);
 
 model_gradient = ADgradient(:ForwardDiff, transformed_model);
 
+results = mcmc_with_warmup(Random.default_rng(), model_gradient, 1000)

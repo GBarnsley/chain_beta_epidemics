@@ -11,18 +11,36 @@ struct SIRstruct
     )
 end
 
-function ld_beta(size, prob_exp, value)
+function ld_beta_approx_bin(size, prob_exp, value)
     N_m = max.(size, 1.001) .- 1; #need to fix this?, just use another when size is close to 1
     α₁ = N_m .* (1 .- prob_exp);
     α₂ = N_m .* prob_exp;
 
     return sum(
-        ((α₁ .- 1) .* log.(value)) .+ ((α₂ .- 1) .* log.(1 .- value)) .- logbeta.(α₁, α₂) #do I need the Log-Beta?
+        ld_beta(α₁, α₂, value)
     )
 end
 
+function ld_beta_alternative(size, prob, value)
+    α₁ = size .* prob;
+    α₂ = size - α₁;
+
+    return sum(
+        ld_beta(α₁, α₂, value)
+    )
+end
+
+function ld_beta(α₁, α₂, value)
+    return ((α₁ .- 1) .* log.(value)) .+ ((α₂ .- 1) .* log.(1 .- value)) .- logbeta.(α₁, α₂) #do I need the Log-Beta?
+end
+
+function ld_gamma(α, β, value)
+    return (α .- 1) .* log.(value) .- (β .* value)# .- lgamma.(α) .+ (α .* log.(β))
+end
+
 function simulate_transition(compartment, transition, exponent_terms, N)
-    ld_beta(compartment .* N, exp.(-exponent_terms), transition)
+    #ld_beta_alternative(compartment .* N, 1 .- exp.(-exponent_terms), transition)
+    ld_beta_approx_bin(compartment .* N, exp.(-exponent_terms), transition)
 end
 
 function (problem::SIRstruct)(θ)
