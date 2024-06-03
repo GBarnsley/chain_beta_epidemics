@@ -49,6 +49,16 @@ function (problem::SIRstruct)(θ)
 
     ld = 0.0;
     #priors, none for now
+    #ld += 
+    #    ld_gamma(0.001, 10, β) +
+    #    ld_gamma(0.02, 10, γ) +
+    #    ld_beta(0.1, 20, I₀)
+
+    ld += 
+        ld_gamma(0.00001, 0.001, β) +
+        ld_gamma(0.0002, 0.001, γ) +
+        ld_beta(0.1, 20, I₀)
+
 
     #initial conditions
     S[1] = 1.0 - I₀;
