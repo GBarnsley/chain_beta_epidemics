@@ -1,7 +1,13 @@
-using DynamicHMC, DynamicHMC.Diagnostics, MCMCDiagnosticTools, LogDensityProblems, LogDensityProblemsAD, SimpleUnPack, Random, CSV, DataFrames, TransformVariables, TransformedLogDensities, SpecialFunctions
-include("../model/chain_beta.jl");
+using DynamicHMC, DynamicHMC.Diagnostics, MCMCDiagnosticTools, CSV, DataFrames
+include("../model/SIR.jl");
 
-problem = SIRstruct(1000, 20)
+problem = SIRstruct(
+    1000,
+    20,
+    Gamma_distribution(1.0, 1.0),
+    Gamma_distribution(1.0, 1.0),
+    Beta_distribution(1.0, 1.0)
+)
 
 variable_transform = define_variable_transforms(problem);
 
