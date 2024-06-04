@@ -1,19 +1,18 @@
-using DynamicHMC, DynamicHMC.Diagnostics, MCMCDiagnosticTools, CSV, DataFrames
+using DynamicHMC, DynamicHMC.Diagnostics, MCMCDiagnosticTools, CSV, DataFrames, Plots
 include("../model/SIR.jl");
 
+t_max = 100;
+t_per_day = 100;
+
 problem = SIRstruct(
-    1000,
-    20,
+    5000,
+    t_max * t_per_day,
     Gamma_distribution(1.0, 1.0),
     Gamma_distribution(1.0, 1.0),
     Beta_distribution(1.0, 1.0)
 )
 
-simulations = simulate_model(problem, (β = 1, γ = 1/5, I₀ = 1/problem.N), 1000);
-
-
-
-
+simulations = simulate_model(problem, (β = 1/3/t_per_day, γ = 1/5/t_per_day, I₀ = 1/problem.N), 500);
 
 variable_transform = define_variable_transforms(problem);
 

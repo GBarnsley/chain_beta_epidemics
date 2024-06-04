@@ -39,8 +39,8 @@ function ld_beta(α₁, α₂, value) #could make this more efficient with the s
 end
 
 function ld_transitions(transition, compartment, prob, N)
-    α₁, α₂ = beta_parameters(compartment .* N, prob)
-    #α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
+    #α₁, α₂ = beta_parameters(compartment .* N, prob)
+    α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
 
     return ld_beta(α₁, α₂, transition)
 end
@@ -48,23 +48,8 @@ end
 #random sampling
 function sample_transitions_unsafe(compartment, prob, N, rng)
 
-    α₁, α₂ = beta_parameters(compartment .* N, prob)
-
-    #for checking when there are errors
-    #issue_indices = (α₁ .== 0.0) .|| (α₂ .== 0.0);
-    #if size(exponent_terms, 1) > 1
-    #    print(
-    #        cat(
-    #            compartment[issue_indices],
-    #            exponent_terms[issue_indices],
-    #            dims = 2
-    #        )
-    #    )
-    #else
-    #    print(
-    #        compartment[issue_indices]
-    #    )
-    #end
+    #α₁, α₂ = beta_parameters(compartment .* N, prob)
+    α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
 
     return rand.(rng, Distributions.Beta.(α₁, α₂))
 end
