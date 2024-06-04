@@ -17,6 +17,15 @@ function calculate_lprior(distribution::Gamma_distribution, value)
     return (α - 1) * log(value) - (β * value)
 end
 
+function calculate_lprior(distribution::Null_distribution, value)
+    return 0.0 #does nothing
+end
+
+#likelihoods (to be defined on a model/use basis)
+function calculate_likelihood(distribution::Null_likelihood, model_output)
+    return 0.0 #does nothing
+end
+
 #Beta transition functions
 function beta_parameters(size, prob)
     N_m = max.(size, 1.001) .- 1; #need to fix this?, just use another when size is close to 1
@@ -39,8 +48,9 @@ function ld_beta(α₁, α₂, value) #could make this more efficient with the s
 end
 
 function ld_transitions(transition, compartment, prob, N)
-    #α₁, α₂ = beta_parameters(compartment .* N, prob)
-    α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
+    #has issues when prob = 1 or 0
+    α₁, α₂ = beta_parameters(compartment .* N, prob)
+    #α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
 
     return ld_beta(α₁, α₂, transition)
 end
@@ -48,8 +58,8 @@ end
 #random sampling
 function sample_transitions_unsafe(compartment, prob, N, rng)
 
-    #α₁, α₂ = beta_parameters(compartment .* N, prob)
-    α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
+    α₁, α₂ = beta_parameters(compartment .* N, prob)
+    #α₁, α₂ = beta_parameters_alternative(compartment .* N, prob)
 
     return rand.(rng, Distributions.Beta.(α₁, α₂))
 end

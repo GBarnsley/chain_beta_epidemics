@@ -14,3 +14,8 @@ struct Beta_distribution <: unit_interval_distribution
     α₂::Real
 end
 
+struct Null_distribution <: real_postive_distribution end
+
+abstract type likelihood_struct end;
+
+struct Null_likelihood <: likelihood_struct end

@@ -6,7 +6,9 @@ struct SIRstruct
     β_prior::real_postive_distribution
     γ_prior::real_postive_distribution
     I₀_prior::unit_interval_distribution
-    #add check that sum to 1
+    likelihood::likelihood_struct
+    SIRstruct(N, t_steps) = new(N, t_steps, Null_distribution(), Null_distribution(), Beta_distribution(1, 1), Null_likelihood())
+    SIRstruct(N, t_steps, β_prior, γ_prior, I₀_prior, likelihood) = new(N, t_steps, β_prior, γ_prior, I₀_prior, likelihood)
 end
 
 function simulate_model(problem::SIRstruct, θ, N_samples; rng = Random.default_rng())
@@ -60,7 +62,7 @@ function iterate_model(problem::SIRstruct, θ)
 end
 
 function (problem::SIRstruct)(θ)
-    @unpack N, β_prior, γ_prior, I₀_prior = problem;
+    @unpack N, β_prior, γ_prior, I₀_prior, likelihood = problem;
     @unpack β, γ, I₀, δI, δR  = θ;
 
     ld = 0.0;
@@ -71,14 +73,16 @@ function (problem::SIRstruct)(θ)
         calculate_lprior(I₀_prior, I₀)
 
     #run model
-    @unpack S, I = iterate_model(problem, θ);
+    model_output = iterate_model(problem, θ);
    
     #likelihood of transitions
-    ld += ld_transitions(δI, S, β .* I, N) +
-        ld_transitions(δR, I, γ, N);
+    @unpack S, I = model_output;
+    ld += ld_transitions(δI, S, rate_to_prob(β .* I), N) +
+        ld_transitions(δR, I, rate_to_prob(γ), N);
 
     #likelihood in terms of data
-    
+    ld += calculate_likelihood(likelihood, model_output);
+
     return ld
 end
 
