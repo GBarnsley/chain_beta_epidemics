@@ -30,10 +30,9 @@ struct SIR_likelihood <: likelihood_struct
 end
 
 function calculate_likelihood(distribution::SIR_likelihood, model_output)
-    @unpack postive_samples = distribution;
     positivity = model_output.I[2:end];
     return sum(
-        (postive_samples .* log.(positivity)) .+ ((100 .- postive_samples) .* log.(1 .- positivity))
+        (distribution.postive_samples .* log.(positivity)) .+ ((100 .- distribution.postive_samples) .* log.(1 .- positivity))
     )
 end
 
@@ -68,4 +67,3 @@ map(x -> EBFMI(x.tree_statistics), results)
 results_pooled = pool_posterior_matrices(results);
 results_pooled = TransformVariables.transform.(variable_transform, eachcol(results_pooled));
 chn = reduce(hcat, map(x -> collect(x), results_pooled));
-

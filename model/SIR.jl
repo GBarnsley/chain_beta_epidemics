@@ -25,9 +25,9 @@ function simulate_model(problem::SIRstruct, θ, N_samples; rng = Random.default_
     R[1, :] .= 0.0;
 
     #simulate transtitions
-    for t in 1:(t_steps - 1)
-        infections = S[t, :] .* sample_transitions(S[t, :], rate_to_prob(β .* I[t, :]), N, rng);
-        recoveries = I[t, :] .* sample_transitions(I[t, :], rate_to_prob(γ), N, rng);
+    for t in 1:(t_steps - 1) #need to rewrite this to not depend on round?
+        infections = sample_transitions(S[t, :], rate_to_prob(β .* I[t, :]), N, rng);
+        recoveries = sample_transitions(I[t, :], rate_to_prob(γ), N, rng);
         S[t+1, :] = S[t, :] - infections;
         I[t+1, :] = I[t, :] + infections - recoveries;
         R[t+1, :] = R[t, :] + recoveries;
@@ -51,11 +51,11 @@ function iterate_model(problem::SIRstruct, θ)
 
     #simulate transtitions
     for t in 1:(t_steps - 1)
-        infections = δI[t] * S[t];
-        recoveries = δR[t] * I[t];
-        S[t+1] = S[t] - infections;
-        I[t+1] = I[t] + infections - recoveries;
-        R[t+1] = R[t] + recoveries;
+        infections = min(δI[t] * S[t], S[t]);
+        recoveries = min(δR[t] * I[t], I[t]);
+        S[t+1] = min(S[t] - infections, 1);
+        I[t+1] = min(I[t] + infections - recoveries, 1);
+        R[t+1] = min(R[t] + recoveries, 1);
     end
 
     return (S = S, I = I, R = R)
@@ -70,7 +70,7 @@ function (problem::SIRstruct)(θ)
     ld += 
         calculate_lprior(β_prior, β) +
         calculate_lprior(γ_prior, γ) +
-        calculate_lprior(I₀_prior, I₀)
+        calculate_lprior(I₀_prior, I₀);
 
     #run model
     model_output = iterate_model(problem, θ);
@@ -82,7 +82,7 @@ function (problem::SIRstruct)(θ)
 
     #likelihood in terms of data
     ld += calculate_likelihood(likelihood, model_output);
-
+    
     return ld
 end
 
